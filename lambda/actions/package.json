@@ -1,0 +1,16 @@
+{
+  "name": "devops-actions-lambda",
+  "version": "1.0.0",
+  "description": "DevOps action groups for KnowledgeOps Agent",
+  "main": "action-handler.js",
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.450.0",
+    "@aws-sdk/client-eks": "^3.450.0",
+    "@aws-sdk/client-ec2": "^3.450.0",
+    "@aws-sdk/client-ecs": "^3.450.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.130",
+    "typescript": "^5.2.2"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "devops-memory-lambda",
+  "version": "1.0.0",
+  "description": "AgentCore Memory management for DevOps KnowledgeOps Agent",
+  "main": "memory-manager.js",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.450.0",
+    "@aws-sdk/lib-dynamodb": "^3.450.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.130",
+    "typescript": "^5.2.2"
+  }
+}

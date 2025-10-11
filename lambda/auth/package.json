@@ -1,0 +1,13 @@
+{
+  "name": "devops-auth-lambda",
+  "version": "1.0.0",
+  "description": "Authentication Lambda for DevOps KnowledgeOps Agent",
+  "main": "auth-handler.js",
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.450.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.130",
+    "typescript": "^5.2.2"
+  }
+}

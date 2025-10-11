@@ -1,0 +1,19 @@
+{
+  "name": "devops-chat-processor",
+  "version": "1.0.0",
+  "description": "Chat processing Lambda for DevOps KnowledgeOps Agent",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agent": "^3.450.0",
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.450.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.450.0",
+    "@aws-sdk/client-dynamodb": "^3.450.0",
+    "@aws-sdk/lib-dynamodb": "^3.450.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.130",
+    "@types/uuid": "^9.0.7",
+    "typescript": "^5.2.2"
+  }
+}
