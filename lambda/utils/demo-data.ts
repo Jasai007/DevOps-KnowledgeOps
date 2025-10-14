@@ -72,7 +72,7 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
 export const DEMO_RESPONSES = {
   'welcome': `👋 Welcome to the DevOps KnowledgeOps Agent! 
 
-I'm your AI-powered DevOps expert, built with Amazon Bedrock AgentCore and enhanced with Strands reasoning capabilities. I can help you with:
+I'm your AI-powered DevOps expert, built with Amazon Bedrock AgentCore. I can help you with:
 
 🔧 **Infrastructure & Cloud**: AWS, Azure, GCP, hybrid setups
 🚀 **CI/CD Pipelines**: GitHub Actions, Jenkins, GitLab CI, AWS CodePipeline  
@@ -86,7 +86,7 @@ Try asking me about any DevOps challenge you're facing!`,
 
   'capabilities': `🚀 **My Capabilities**
 
-**Advanced AI Reasoning**: Powered by Bedrock AgentCore with Strands integration for multi-step problem solving
+**Advanced AI Reasoning**: Powered by Bedrock AgentCore for multi-step problem solving
 
 **Comprehensive Knowledge**: 
 - Infrastructure as Code (Terraform, CloudFormation, Pulumi)

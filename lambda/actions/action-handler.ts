@@ -1,4 +1,4 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DevOpsToolsActions } from './devops-tools';
 import { AWSIntegrationActions } from './aws-integration';
 

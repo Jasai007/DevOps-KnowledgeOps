@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Signup</title>
+</head>
+<body>
+    <h1>Debug Signup Issue</h1>
+    <div id="results"></div>
+
+    <script>
+        async function testSignup() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Test 1: Health check
+                results.innerHTML += '<h3>1. Testing Health Endpoint</h3>';
+                const healthResponse = await fetch('http://localhost:3001/health');
+                const healthData = await healthResponse.json();
+                results.innerHTML += `<p>✅ Health: ${JSON.stringify(healthData)}</p>`;
+
+                // Test 2: Test signup
+                results.innerHTML += '<h3>2. Testing Signup Endpoint</h3>';
+                const signupResponse = await fetch('http://localhost:3001/auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'signup',
+                        username: 'debug@example.com',
+                        email: 'debug@example.com',
+                        password: 'Debug123!'
+                    })
+                });
+
+                const signupData = await signupResponse.json();
+                results.innerHTML += `<p>Status: ${signupResponse.status}</p>`;
+                results.innerHTML += `<p>Response: ${JSON.stringify(signupData)}</p>`;
+
+                if (signupData.success) {
+                    results.innerHTML += '<p>✅ Signup successful!</p>';
+                } else {
+                    results.innerHTML += `<p>❌ Signup failed: ${signupData.error}</p>`;
+                }
+
+            } catch (error) {
+                results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        // Run test when page loads
+        window.onload = testSignup;
+    </script>
+</body>
+</html>

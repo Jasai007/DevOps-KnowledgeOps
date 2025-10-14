@@ -1,0 +1,195 @@
+
+// Add this to the top of backend/server.js
+const { UserMemoryManager } = require('./user-memory-manager');
+
+// Add after other initializations
+const userMemoryManager = new UserMemoryManager();
+
+// Replace the existing /chat endpoint with this enhanced version:
+app.post('/chat', async (req, res) => {
+    try {
+        const { message, sessionId } = req.body;
+
+        if (!message || !message.trim()) {
+            return res.status(400).json({
+                success: false,
+                error: 'Message is required'
+            });
+        }
+
+        console.log(`📝 Processing message: ${message.substring(0, 100)}...`);
+
+        // Get user from auth header
+        const userId = getUserFromToken(req.headers.authorization);
+
+        // Security check: If sessionId is provided, verify user owns it
+        if (sessionId && sessions.has(sessionId)) {
+            const existingSession = sessions.get(sessionId);
+            if (existingSession.userId !== userId) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Access denied: You can only send messages to your own sessions'
+                });
+            }
+        }
+
+        // Load user memory
+        let userMemory = await userMemoryManager.getUserMemory(userId);
+        
+        // Extract and update context from current message
+        userMemory = userMemoryManager.extractUserContext(message, userMemory);
+        
+        // Build context-enhanced message
+        const enhancedMessage = userMemoryManager.buildContextMessage(message, userMemory);
+        
+        console.log(`🧠 Enhanced message with user context: ${enhancedMessage.length > message.length ? 'YES' : 'NO'}`);
+
+        // Get or create session
+        const currentSessionId = getOrCreateSession(sessionId, userId);
+
+        // Add user message to history
+        addMessageToHistory(currentSessionId, 'user', message);
+        console.log(`📝 Added user message to session ${currentSessionId}`);
+
+        const startTime = Date.now();
+
+        console.log(`🔄 Using session: ${currentSessionId}`);
+        console.log(`📚 Conversation history length: ${conversationHistory.get(currentSessionId)?.length || 0}`);
+
+        let finalResponse;
+        let gatewayMetadata = {};
+
+        if (gateway) {
+            // Use AgentCore Gateway for enhanced capabilities
+            console.log(`🚀 Using AgentCore Gateway for enhanced processing`);
+            
+            const gatewayRequest = {
+                message: enhancedMessage, // Use enhanced message with user context
+                sessionId: currentSessionId,
+                userId: userId,
+                priority: 'normal'
+            };
+
+            const gatewayResponse = await gateway.invoke(gatewayRequest);
+            
+            if (gatewayResponse.success) {
+                finalResponse = gatewayResponse.response;
+                gatewayMetadata = gatewayResponse.metadata;
+                console.log(`✅ Gateway response: ${gatewayMetadata.responseTime}ms, cache: ${gatewayMetadata.cacheHit}`);
+            } else {
+                throw new Error(gatewayResponse.error);
+            }
+        } else {
+            // Fallback to direct Bedrock Agent calls
+            console.log(`📡 Using direct Bedrock Agent call (Gateway not available)`);
+            
+            const command = new InvokeAgentCommand({
+                agentId: agentId,
+                agentAliasId: agentAliasId,
+                sessionId: currentSessionId,
+                inputText: enhancedMessage, // Use enhanced message
+                enableTrace: true
+            });
+
+            const response = await bedrockClient.send(command);
+
+            // Process streaming response
+            let fullResponse = '';
+            if (response.completion) {
+                for await (const chunk of response.completion) {
+                    if (chunk.chunk?.bytes) {
+                        const text = Buffer.from(chunk.chunk.bytes).toString('utf-8');
+                        fullResponse += text;
+                    }
+                }
+            }
+
+            finalResponse = fullResponse || 'I apologize, but I didn\'t receive a complete response. Please try again.';
+        }
+
+        // Add assistant response to history
+        addMessageToHistory(currentSessionId, 'assistant', finalResponse);
+        console.log(`🤖 Added assistant message to session ${currentSessionId}`);
+
+        // Save updated user memory
+        await userMemoryManager.saveUserMemory(userId, userMemory);
+        
+        // Add session summary if conversation is meaningful
+        if (message.length > 20) {
+            await userMemoryManager.addSessionSummary(
+                userId, 
+                currentSessionId, 
+                `Discussed: ${message.substring(0, 50)}...`
+            );
+        }
+
+        const responseTime = Date.now() - startTime;
+
+        console.log(`✅ Response generated in ${responseTime}ms`);
+        console.log(`💾 Session ${currentSessionId} now has ${conversationHistory.get(currentSessionId)?.length || 0} messages`);
+
+        res.json({
+            success: true,
+            response: finalResponse,
+            sessionId: currentSessionId,
+            metadata: {
+                responseTime,
+                confidence: gatewayMetadata.confidence || 0.9,
+                agentId: gatewayMetadata.agentUsed || agentId,
+                region,
+                messageCount: conversationHistory.get(currentSessionId)?.length || 0,
+                contextUsed: conversationHistory.get(currentSessionId)?.length > 1,
+                userMemoryUsed: enhancedMessage.length > message.length,
+                // Gateway-specific metadata
+                cacheHit: gatewayMetadata.cacheHit || false,
+                retryCount: gatewayMetadata.retryCount || 0,
+                tokensUsed: gatewayMetadata.tokensUsed,
+                gatewayEnabled: !!gateway
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Chat error:', error);
+
+        res.status(500).json({
+            success: false,
+            error: 'Failed to process your message',
+            details: error.message,
+            metadata: {
+                agentId,
+                region,
+                timestamp: new Date().toISOString()
+            }
+        });
+    }
+});
+
+// Add new endpoints for user memory management
+app.get('/user/memory', async (req, res) => {
+    try {
+        const userId = getUserFromToken(req.headers.authorization);
+        const userMemory = await userMemoryManager.getUserMemory(userId);
+        
+        res.json({
+            success: true,
+            memory: {
+                profile: userMemory.profile,
+                keyFacts: userMemory.keyFacts,
+                sessionCount: userMemory.sessionSummaries?.length || 0,
+                lastUpdated: userMemory.lastUpdated
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/user/memory', async (req, res) => {
+    try {
+        const userId = getUserFromToken(req.headers.authorization);
+        await userMemoryManager.clearUserMemory(userId);
+        res.json({ success: true, message: 'User memory cleared' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});

@@ -156,9 +156,6 @@ export class SessionManager {
         TableName: this.tableName,
         IndexName: 'UserIndex',
         KeyConditionExpression: 'userId = :userId',
-        ExpressionAttributeValues: {
-          ':userId': userId,
-        },
         ScanIndexForward: false, // Most recent first
         Limit: limit,
         FilterExpression: 'messageId = :metadata',

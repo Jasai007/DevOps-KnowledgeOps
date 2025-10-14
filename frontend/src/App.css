@@ -1,25 +1,47 @@
-/* App.css */
+/* App.css - Mobile-First Responsive Design */
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+}
+
 .App {
-  text-align: center;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Custom scrollbar for chat area */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Mobile scrollbar (thinner) */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 3px;
+  }
 }
 
 /* Smooth animations */
@@ -34,11 +56,18 @@
   transition: opacity 300ms, transform 300ms;
 }
 
-/* Code block styling */
+/* Code block styling - responsive */
 .code-block {
   margin: 8px 0;
   border-radius: 8px;
   overflow: hidden;
+  font-size: 0.8rem;
+}
+
+@media (min-width: 768px) {
+  .code-block {
+    font-size: 0.875rem;
+  }
 }
 
 /* Typing indicator animation */
@@ -63,8 +92,9 @@
   animation-delay: -0.16s;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
+/* Mobile-first responsive design */
+@media (max-width: 599px) {
+  /* Mobile styles */
   .MuiContainer-root {
     padding-left: 8px !important;
     padding-right: 8px !important;
@@ -72,6 +102,36 @@
   
   .message-container {
     max-width: 90% !important;
+  }
+  
+  /* Reduce font sizes on mobile */
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+  }
+  
+  .MuiTypography-body1 {
+    font-size: 0.875rem !important;
+  }
+  
+  /* Adjust spacing */
+  .MuiBox-root {
+    margin-bottom: 12px !important;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  /* Tablet styles */
+  .MuiContainer-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+@media (min-width: 960px) {
+  /* Desktop styles */
+  .MuiContainer-root {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
   }
 }
 
@@ -87,6 +147,14 @@
 .MuiChip-root:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Disable hover effects on touch devices */
+@media (hover: none) {
+  .MuiChip-root:hover {
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 /* Loading animation */
@@ -106,10 +174,17 @@
   }
 }
 
-/* Syntax highlighting customizations */
+/* Syntax highlighting customizations - responsive */
 .prism-code {
-  font-size: 0.875rem !important;
-  line-height: 1.5 !important;
+  font-size: 0.75rem !important;
+  line-height: 1.4 !important;
+}
+
+@media (min-width: 768px) {
+  .prism-code {
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+  }
 }
 
 /* Message bubble animations */
@@ -133,13 +208,15 @@
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
 }
 
-/* Custom button hover effects */
+/* Custom button hover effects - disabled on mobile */
 .MuiButton-root {
   transition: all 0.2s ease-in-out;
 }
 
-.MuiButton-root:hover {
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .MuiButton-root:hover {
+    transform: translateY(-1px);
+  }
 }
 
 /* Focus styles for accessibility */
@@ -147,41 +224,81 @@
   border-width: 2px;
 }
 
-/* Custom chip styles */
+/* Custom chip styles - responsive */
 .status-chip {
   font-weight: 600;
   text-transform: uppercase;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
 }
 
-/* Message timestamp styling */
+@media (min-width: 768px) {
+  .status-chip {
+    font-size: 0.75rem;
+  }
+}
+
+/* Message timestamp styling - responsive */
 .message-timestamp {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   opacity: 0.7;
   margin-top: 4px;
 }
 
-/* Suggestion chips container */
+@media (min-width: 768px) {
+  .message-timestamp {
+    font-size: 0.7rem;
+  }
+}
+
+/* Suggestion chips container - responsive grid */
 .suggestions-container {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 8px;
   margin-top: 16px;
 }
 
-/* Avatar styling */
-.message-avatar {
-  width: 32px;
-  height: 32px;
-  font-size: 1rem;
+@media (min-width: 600px) {
+  .suggestions-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
 }
 
-/* Input area styling */
+@media (min-width: 960px) {
+  .suggestions-container {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+}
+
+/* Avatar styling - responsive */
+.message-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.9rem;
+}
+
+@media (min-width: 768px) {
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+}
+
+/* Input area styling - mobile optimized */
 .input-container {
   background: white;
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 768px) {
+  .input-container {
+    padding: 16px;
+  }
 }
 
 /* Welcome message styling */
@@ -196,11 +313,67 @@
   border-left: 4px solid #f44336;
 }
 
-/* Code inline styling */
+/* Code inline styling - responsive */
 code {
   background-color: rgba(0, 0, 0, 0.1);
   padding: 2px 4px;
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875em;
+  font-size: 0.8em;
+  word-break: break-all;
+}
+
+@media (min-width: 768px) {
+  code {
+    font-size: 0.875em;
+    word-break: normal;
+  }
+}
+
+/* Safe area handling for mobile devices */
+@supports (padding: max(0px)) {
+  .mobile-safe-area {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media screen and (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .MuiPaper-root {
+    border: 1px solid;
+  }
+  
+  .MuiChip-outlined {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .message-bubble {
+    animation: none;
+  }
+  
+  .MuiChip-root:hover {
+    transform: none;
+  }
 }

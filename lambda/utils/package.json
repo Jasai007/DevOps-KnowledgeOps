@@ -1,0 +1,15 @@
+{
+  "name": "devops-utils-lambda",
+  "version": "1.0.0",
+  "description": "Utility functions for DevOps KnowledgeOps Agent",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.450.0",
+    "@aws-sdk/lib-dynamodb": "^3.450.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.130",
+    "@types/node": "^20.9.0",
+    "typescript": "^5.2.2"
+  }
+}

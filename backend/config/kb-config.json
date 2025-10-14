@@ -1,0 +1,31 @@
+{
+    "name": "DevOpsKnowledgeBase",
+    "description": "Comprehensive DevOps documentation and best practices using S3-based vector storage",
+    "roleArn": "arn:aws:iam::992382848863:role/BedrockKnowledgeBaseRole-DevOps",
+    "knowledgeBaseConfiguration": {
+        "type": "VECTOR",
+        "vectorKnowledgeBaseConfiguration": {
+            "embeddingModelArn": "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0",
+            "embeddingModelConfiguration": {
+                "bedrockEmbeddingModelConfiguration": {
+                    "dimensions": 1024
+                }
+            }
+        }
+    },
+    "storageConfiguration": {
+        "type": "RDS",
+        "rdsConfiguration": {
+            "resourceArn": "arn:aws:rds:us-east-1:992382848863:cluster:bedrock-kb-aurora-serverless-v2",
+            "credentialsSecretArn": "arn:aws:secretsmanager:us-east-1:992382848863:secret:bedrock-kb-aurora-credentials",
+            "databaseName": "bedrock_vector_db",
+            "tableName": "knowledge_base_embeddings",
+            "fieldMapping": {
+                "primaryKeyField": "id",
+                "vectorField": "embedding",
+                "textField": "chunks",
+                "metadataField": "metadata"
+            }
+        }
+    }
+}

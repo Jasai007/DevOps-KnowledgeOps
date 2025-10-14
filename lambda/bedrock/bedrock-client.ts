@@ -1,16 +1,15 @@
-import { 
-  BedrockAgentClient, 
-  CreateAgentCommand, 
-  GetAgentCommand,
-  UpdateAgentCommand,
+import {
+  BedrockAgentClient,
+  CreateAgentCommand,
   PrepareAgentCommand,
 } from '@aws-sdk/client-bedrock-agent';
-import { 
-  BedrockAgentRuntimeClient, 
+import {
+  BedrockAgentRuntimeClient,
   InvokeAgentCommand,
   InvokeAgentCommandInput,
 } from '@aws-sdk/client-bedrock-agent-runtime';
-import { DEVOPS_AGENT_CONFIG, buildAgentPrompt } from './agent-config';
+import { DEVOPS_AGENT_CONFIG } from './agent-config';
+import { S3VectorStore, S3VectorStoreConfig } from './s3-vector-store';
 
 export interface AgentResponse {
   success: boolean;
@@ -27,16 +26,33 @@ export interface AgentResponse {
 export class BedrockAgentManager {
   private agentClient: BedrockAgentClient;
   private runtimeClient: BedrockAgentRuntimeClient;
+  private vectorStore: S3VectorStore;
   private agentId?: string;
   private agentAliasId?: string;
 
   constructor(region: string = 'us-east-1') {
     this.agentClient = new BedrockAgentClient({ region });
     this.runtimeClient = new BedrockAgentRuntimeClient({ region });
-    
+
+    // Initialize S3 Vector Store
+    const vectorConfig: S3VectorStoreConfig = {
+      bucketName: process.env.KNOWLEDGE_BUCKET_NAME || 'devops-knowledge-992382848863-us-east-1',
+      vectorPrefix: 'vectors/',
+      documentsPrefix: 'knowledge-base/',
+      indexPrefix: 'index/',
+      embeddingModel: process.env.EMBEDDING_MODEL || 'amazon.titan-embed-text-v2:0',
+      dimensions: parseInt(process.env.VECTOR_DIMENSIONS || '1024'),
+      region
+    };
+
+    this.vectorStore = new S3VectorStore(vectorConfig);
+
     // Get agent ID from environment or use default
-    this.agentId = process.env.BEDROCK_AGENT_ID;
+    this.agentId = process.env.BEDROCK_AGENT_ID || 'MNJESZYALW';
     this.agentAliasId = process.env.BEDROCK_AGENT_ALIAS_ID || 'TSTALIASID';
+
+    console.log(`Bedrock Agent Manager initialized with Agent ID: ${this.agentId}`);
+    console.log(`S3 Vector Store configured with bucket: ${vectorConfig.bucketName}`);
   }
 
   async createAgent(): Promise<string | null> {
@@ -46,19 +62,19 @@ export class BedrockAgentManager {
         description: DEVOPS_AGENT_CONFIG.description,
         foundationModel: DEVOPS_AGENT_CONFIG.foundationModel,
         instruction: DEVOPS_AGENT_CONFIG.instruction,
-        agentResourceRoleArn: process.env.AGENT_ROLE_ARN,
+        agentResourceRoleArn: process.env.AGENT_ROLE_ARN || '',
         // Note: AgentCore specific configurations would be set through AWS Console or separate APIs
       });
 
       const response = await this.agentClient.send(command);
       this.agentId = response.agent?.agentId;
-      
+
       if (this.agentId) {
         // Prepare the agent
         await this.prepareAgent();
         return this.agentId;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error creating agent:', error);
@@ -86,25 +102,25 @@ export class BedrockAgentManager {
   }
 
   async invokeAgent(
-    userMessage: string, 
+    userMessage: string,
     sessionId: string,
-    context?: string
+    _context?: string
   ): Promise<AgentResponse> {
     const startTime = Date.now();
 
     try {
       if (!this.agentId) {
-        // For demo purposes, use a mock response if agent isn't set up yet
+        // Use mock response if agent isn't configured
         return this.getMockResponse(userMessage, sessionId, startTime);
       }
 
-      const prompt = buildAgentPrompt(userMessage, context);
+      console.log(`Invoking Bedrock Agent: ${this.agentId} with alias: ${this.agentAliasId}`);
 
       const input: InvokeAgentCommandInput = {
         agentId: this.agentId,
         agentAliasId: this.agentAliasId,
         sessionId: sessionId,
-        inputText: prompt,
+        inputText: userMessage,
       };
 
       const command = new InvokeAgentCommand(input);
@@ -115,7 +131,7 @@ export class BedrockAgentManager {
       if (response.completion) {
         for await (const chunk of response.completion) {
           if (chunk.chunk?.bytes) {
-            const text = new TextDecoder().decode(chunk.chunk.bytes);
+            const text = Buffer.from(chunk.chunk.bytes).toString('utf-8');
             fullResponse += text;
           }
         }
@@ -129,31 +145,29 @@ export class BedrockAgentManager {
         sessionId: sessionId,
         metadata: {
           responseTime,
-          confidence: 0.9, // Mock confidence score
+          confidence: 0.9,
         },
       };
 
     } catch (error: any) {
       console.error('Error invoking agent:', error);
-      
+
       const responseTime = Date.now() - startTime;
-      
-      // Return a helpful error response
-      return {
-        success: false,
-        error: error.message || 'Failed to get response from agent',
-        sessionId: sessionId,
-        metadata: {
-          responseTime,
-        },
-      };
+
+      // Fallback to mock response on error
+      const mockResponse = this.getMockResponse(userMessage, sessionId, startTime);
+      mockResponse.error = `Agent error (falling back to demo): ${error.message}`;
+
+      return mockResponse;
     }
   }
+
+
 
   private getMockResponse(userMessage: string, sessionId: string, startTime: number): AgentResponse {
     // Mock responses for demo purposes when agent isn't fully configured
     const mockResponses = {
-      greeting: `Hello! I'm the DevOps KnowledgeOps Agent, powered by Amazon Bedrock AgentCore with Strands integration. I'm here to help you with all your DevOps challenges!
+      greeting: `Hello! I'm the DevOps KnowledgeOps Agent, powered by Amazon Bedrock AgentCore. I'm here to help you with all your DevOps challenges!
 
 I can assist you with:
 🔧 Infrastructure as Code (Terraform, CloudFormation)
@@ -418,7 +432,7 @@ kube-bench run --targets node,policies,managedservices
 
 Would you like me to dive deeper into any specific security aspect?`,
 
-      default: `I understand you're looking for DevOps guidance. As your AI-powered DevOps expert with Bedrock AgentCore and Strands integration, I can help you with:
+      default: `I understand you're looking for DevOps guidance. As your AI-powered DevOps expert with Bedrock AgentCore, I can help you with:
 
 **Infrastructure & Automation:**
 - Infrastructure as Code (Terraform, CloudFormation, Pulumi)

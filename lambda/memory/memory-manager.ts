@@ -7,7 +7,6 @@ import {
   DynamoDBDocumentClient, 
   PutCommand, 
   GetCommand, 
-  UpdateCommand, 
   QueryCommand 
 } from '@aws-sdk/lib-dynamodb';
 
@@ -16,7 +15,7 @@ export interface ConversationMemory {
   userId: string;
   memoryType: 'context' | 'preferences' | 'history' | 'insights';
   memoryKey: string;
-  memoryValue: any;
+  memoryValue: unknown;
   timestamp: number;
   expiresAt?: number;
   confidence?: number;
@@ -51,7 +50,20 @@ export class MemoryManager {
   constructor(region: string = 'us-east-1', retentionDays: number = 7) {
     const dynamoClient = new DynamoDBClient({ region });
     this.client = DynamoDBDocumentClient.from(dynamoClient);
-    this.tableName = process.env.MEMORY_TABLE_NAME || process.env.CHAT_TABLE_NAME!;
+    
+    // Use environment variables with fallback
+    const getEnvVar = (name: string): string | undefined => {
+      try {
+        return (globalThis as any)?.process?.env?.[name];
+      } catch {
+        return undefined;
+      }
+    };
+    
+    const memoryTableName = getEnvVar('MEMORY_TABLE_NAME');
+    const chatTableName = getEnvVar('CHAT_TABLE_NAME');
+    this.tableName = memoryTableName || chatTableName || 'devops-agent-memory';
+    
     this.retentionDays = retentionDays;
   }
 
@@ -71,7 +83,14 @@ export class MemoryManager {
         Item: {
           sessionId: `MEMORY_${memory.sessionId}`,
           messageId: `${memory.memoryType}_${memory.memoryKey}`,
-          ...fullMemory,
+          userId: fullMemory.userId,
+          memoryType: fullMemory.memoryType,
+          memoryKey: fullMemory.memoryKey,
+          memoryValue: fullMemory.memoryValue,
+          timestamp: fullMemory.timestamp,
+          expiresAt: fullMemory.expiresAt,
+          confidence: fullMemory.confidence,
+          source: fullMemory.source,
         },
       }));
     } catch (error) {
@@ -90,8 +109,19 @@ export class MemoryManager {
       }));
 
       if (response.Item) {
-        const { sessionId: _, messageId: __, ...memory } = response.Item;
-        return memory as ConversationMemory;
+        // Extract the memory data, excluding DynamoDB keys
+        const item = response.Item;
+        return {
+          sessionId: item.sessionId?.replace('MEMORY_', '') || '',
+          userId: item.userId || '',
+          memoryType: item.memoryType || 'context',
+          memoryKey: item.memoryKey || '',
+          memoryValue: item.memoryValue,
+          timestamp: item.timestamp || 0,
+          expiresAt: item.expiresAt,
+          confidence: item.confidence,
+          source: item.source,
+        } as ConversationMemory;
       }
 
       return null;
@@ -118,10 +148,17 @@ export class MemoryManager {
 
       const response = await this.client.send(new QueryCommand(params));
 
-      return (response.Items || []).map(item => {
-        const { sessionId: _, messageId: __, ...memory } = item;
-        return memory as ConversationMemory;
-      });
+      return (response.Items || []).map(item => ({
+        sessionId: item.sessionId?.replace('MEMORY_', '') || '',
+        userId: item.userId || '',
+        memoryType: item.memoryType || 'context',
+        memoryKey: item.memoryKey || '',
+        memoryValue: item.memoryValue,
+        timestamp: item.timestamp || 0,
+        expiresAt: item.expiresAt,
+        confidence: item.confidence,
+        source: item.source,
+      } as ConversationMemory));
     } catch (error) {
       console.error('Error getting session memories:', error);
       return [];
@@ -130,7 +167,8 @@ export class MemoryManager {
 
   async updateUserPreferences(userId: string, preferences: Partial<UserPreferences>): Promise<void> {
     const existing = await this.getMemory('USER_GLOBAL', 'preferences', userId);
-    const updated = existing ? { ...existing.memoryValue, ...preferences } : preferences;
+    const existingPrefs = (existing?.memoryValue as UserPreferences) || {};
+    const updated = { ...existingPrefs, ...preferences };
 
     await this.storeMemory({
       sessionId: 'USER_GLOBAL',
@@ -145,12 +183,19 @@ export class MemoryManager {
 
   async getUserPreferences(userId: string): Promise<UserPreferences> {
     const memory = await this.getMemory('USER_GLOBAL', 'preferences', userId);
-    return memory?.memoryValue || {};
+    return (memory?.memoryValue as UserPreferences) || {};
   }
 
   async updateConversationInsights(sessionId: string, userId: string, insights: Partial<ConversationInsights>): Promise<void> {
     const existing = await this.getMemory(sessionId, 'insights', 'conversation');
-    const updated = existing ? this.mergeInsights(existing.memoryValue, insights) : insights;
+    const existingInsights = (existing?.memoryValue as ConversationInsights) || {
+      commonTopics: [],
+      frequentTools: [],
+      problemPatterns: [],
+      successfulSolutions: [],
+      learningProgress: [],
+    };
+    const updated = this.mergeInsights(existingInsights, insights);
 
     await this.storeMemory({
       sessionId,
@@ -165,7 +210,7 @@ export class MemoryManager {
 
   async getConversationInsights(sessionId: string): Promise<ConversationInsights> {
     const memory = await this.getMemory(sessionId, 'insights', 'conversation');
-    return memory?.memoryValue || {
+    return (memory?.memoryValue as ConversationInsights) || {
       commonTopics: [],
       frequentTools: [],
       problemPatterns: [],
@@ -174,7 +219,7 @@ export class MemoryManager {
     };
   }
 
-  async storeContextualMemory(sessionId: string, userId: string, context: any): Promise<void> {
+  async storeContextualMemory(sessionId: string, userId: string, context: Record<string, unknown>): Promise<void> {
     await this.storeMemory({
       sessionId,
       userId,
@@ -186,9 +231,9 @@ export class MemoryManager {
     });
   }
 
-  async getContextualMemory(sessionId: string): Promise<any> {
+  async getContextualMemory(sessionId: string): Promise<Record<string, unknown>> {
     const memory = await this.getMemory(sessionId, 'context', 'current');
-    return memory?.memoryValue || {};
+    return (memory?.memoryValue as Record<string, unknown>) || {};
   }
 
   async generateMemorySummary(sessionId: string): Promise<string> {
@@ -198,21 +243,25 @@ export class MemoryManager {
       return 'No previous conversation context available.';
     }
 
-    const context = memories.find(m => m.memoryType === 'context')?.memoryValue || {};
-    const insights = memories.find(m => m.memoryType === 'insights')?.memoryValue || {};
+    const context = (memories.find(m => m.memoryType === 'context')?.memoryValue as Record<string, unknown>) || {};
+    const insights = (memories.find(m => m.memoryType === 'insights')?.memoryValue as ConversationInsights) || {};
     
     const summary: string[] = [];
 
-    if (context.currentTopic) {
+    if (context.currentTopic && typeof context.currentTopic === 'string') {
       summary.push(`Current focus: ${context.currentTopic}`);
     }
 
-    if (context.mentionedTools && context.mentionedTools.length > 0) {
+    if (Array.isArray(context.mentionedTools) && context.mentionedTools.length > 0) {
       summary.push(`Tools discussed: ${context.mentionedTools.join(', ')}`);
     }
 
-    if (context.infrastructureContext?.cloudProvider) {
-      summary.push(`Cloud context: ${context.infrastructureContext.cloudProvider}`);
+    if (context.infrastructureContext && 
+        typeof context.infrastructureContext === 'object' && 
+        context.infrastructureContext !== null &&
+        'cloudProvider' in context.infrastructureContext) {
+      const infraContext = context.infrastructureContext as { cloudProvider: string };
+      summary.push(`Cloud context: ${infraContext.cloudProvider}`);
     }
 
     if (insights.commonTopics && insights.commonTopics.length > 0) {

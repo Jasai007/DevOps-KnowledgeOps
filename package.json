@@ -2,36 +2,46 @@
   "name": "devops-knowledgeops-agent",
   "version": "1.0.0",
   "description": "AI-powered DevOps assistant using Amazon Bedrock AgentCore",
-  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "lambda/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc -w",
-    "test": "jest",
-    "cdk": "cdk",
-    "deploy": "cdk deploy",
-    "destroy": "cdk destroy"
+    "start": "cd backend && npm start",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "start:dev": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "deploy": "cd infrastructure && cdk deploy",
+    "destroy": "cd infrastructure && cdk destroy",
+    "setup": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "clean": "rm -rf node_modules backend/node_modules frontend/node_modules lambda/*/node_modules",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint"
   },
-  "keywords": ["devops", "ai", "bedrock", "agentcore", "aws"],
+  "keywords": [
+    "devops",
+    "ai",
+    "bedrock",
+    "agentcore",
+    "aws",
+    "hackathon"
+  ],
   "author": "DevOps Team",
   "license": "MIT",
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.130",
-    "@types/jest": "^29.5.8",
-    "@types/node": "^20.9.0",
-    "aws-cdk": "^2.110.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.1",
-    "typescript": "^5.2.2"
+    "concurrently": "^8.2.2"
   },
-  "dependencies": {
-    "aws-cdk-lib": "^2.110.0",
-    "aws-lambda": "^1.0.7",
-    "aws-sdk": "^2.1490.0",
-    "@aws-sdk/client-bedrock-agent": "^3.450.0",
-    "@aws-sdk/client-bedrock-agent-runtime": "^3.450.0",
-    "@aws-sdk/client-cognito-identity-provider": "^3.450.0",
-    "@aws-sdk/client-dynamodb": "^3.450.0",
-    "@aws-sdk/client-s3": "^3.450.0",
-    "constructs": "^10.3.0"
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }

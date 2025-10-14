@@ -1,0 +1,19 @@
+{
+    "name": "DevOpsKnowledgeBase-S3",
+    "description": "Comprehensive DevOps documentation with S3-based vector storage",
+    "s3Configuration": {
+        "bucketName": "devops-knowledge-992382848863-us-east-1",
+        "vectorPrefix": "vectors/",
+        "documentsPrefix": "knowledge-base/",
+        "indexPrefix": "index/",
+        "embeddingModel": "amazon.titan-embed-text-v2:0",
+        "chunkSize": 1000,
+        "chunkOverlap": 200,
+        "dimensions": 1024
+    },
+    "searchConfiguration": {
+        "maxResults": 10,
+        "similarityThreshold": 0.7,
+        "searchAlgorithm": "cosine"
+    }
+}

@@ -1,6 +1,6 @@
 import { SessionManager, ChatMessage } from '../session/session-manager';
 
-export interface ConversationContext {
+export interface ConversationContext extends Record<string, unknown> {
   currentTopic?: string;
   mentionedTools?: string[];
   infrastructureContext?: {

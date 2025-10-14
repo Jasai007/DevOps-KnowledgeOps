@@ -23,10 +23,35 @@ const theme = createTheme({
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
     h6: {
       fontWeight: 600,
+      fontSize: '1.25rem',
+      '@media (max-width:600px)': {
+        fontSize: '1.1rem',
+      },
+    },
+    body1: {
+      fontSize: '1rem',
+      '@media (max-width:600px)': {
+        fontSize: '0.875rem',
+      },
+    },
+    body2: {
+      fontSize: '0.875rem',
+      '@media (max-width:600px)': {
+        fontSize: '0.8rem',
+      },
     },
   },
   shape: {
     borderRadius: 8,
+  },
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 960,
+      lg: 1280,
+      xl: 1920,
+    },
   },
   components: {
     MuiButton: {
@@ -34,6 +59,10 @@ const theme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: 600,
+          minHeight: 44, // Better touch target
+          '@media (max-width:600px)': {
+            minHeight: 48, // Even better for mobile
+          },
         },
       },
     },
@@ -41,6 +70,56 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           fontWeight: 500,
+          minHeight: 32,
+          '@media (max-width:600px)': {
+            minHeight: 36,
+            fontSize: '0.8rem',
+          },
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiInputBase-input': {
+            fontSize: '1rem',
+            '@media (max-width:600px)': {
+              fontSize: '16px', // Prevents zoom on iOS
+            },
+          },
+        },
+      },
+    },
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          paddingLeft: '16px',
+          paddingRight: '16px',
+          '@media (max-width:600px)': {
+            paddingLeft: '8px',
+            paddingRight: '8px',
+          },
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:600px)': {
+            minHeight: 56,
+          },
+        },
+      },
+    },
+    MuiToolbar: {
+      styleOverrides: {
+        root: {
+          minHeight: 64,
+          '@media (max-width:600px)': {
+            minHeight: 56,
+            paddingLeft: 8,
+            paddingRight: 8,
+          },
         },
       },
     },

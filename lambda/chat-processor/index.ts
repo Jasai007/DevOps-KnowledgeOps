@@ -1,9 +1,10 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { BedrockAgentManager } from '../bedrock/bedrock-client';
 import { SessionManager } from '../session/session-manager';
 import { MemoryManager } from '../memory/memory-manager';
 import { ConversationUtils } from '../utils/conversation-utils';
 import { CognitoHelper } from '../auth/cognito-helper';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatRequest {
   message: string;

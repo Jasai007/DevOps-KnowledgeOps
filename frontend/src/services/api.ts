@@ -17,6 +17,7 @@ export interface AuthResponse {
   idToken?: string;
   refreshToken?: string;
   error?: string;
+  message?: string;
 }
 
 export interface ChatRequest {
@@ -32,6 +33,10 @@ export interface ChatResponse {
   metadata?: {
     responseTime: number;
     confidence?: number;
+    agentId?: string;
+    region?: string;
+    messageCount?: number;
+    contextUsed?: boolean;
   };
 }
 
@@ -40,20 +45,41 @@ export interface SessionRequest {
   sessionId?: string;
 }
 
+export interface Message {
+  id: string;
+  messageId?: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export interface Session {
+  sessionId: string;
+  createdAt: string;
+  lastActivity: string;
+  messageCount: number;
+  preview?: string;
+}
+
 export interface SessionResponse {
   success: boolean;
-  session?: any;
-  sessions?: any[];
-  messages?: any[];
+  session?: Session;
+  sessions?: Session[];
+  messages?: Message[];
   error?: string;
+  sessionId?: string;
+  messageCount?: number;
 }
 
 class ApiService {
   private accessToken: string | null = null;
 
   constructor() {
-    // Load token from localStorage
+    // Load Cognito token from localStorage
     this.accessToken = localStorage.getItem('accessToken');
+    
+    // No auto-authentication - users must explicitly sign in with Cognito
+    console.log('API Service initialized with Cognito authentication');
   }
 
   private async makeRequest<T>(
@@ -61,7 +87,7 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
@@ -105,7 +131,7 @@ class ApiService {
       console.error('Sign in error:', error);
       return {
         success: false,
-        error: 'Failed to sign in. Please check your connection.',
+        error: error instanceof Error ? error.message : 'Failed to sign in. Please check your connection.',
       };
     }
   }
@@ -124,7 +150,7 @@ class ApiService {
       console.error('Create demo user error:', error);
       return {
         success: false,
-        error: 'Failed to create demo user.',
+        error: error instanceof Error ? error.message : 'Failed to create demo user.',
       };
     }
   }
@@ -144,7 +170,7 @@ class ApiService {
       console.error('Create session error:', error);
       return {
         success: false,
-        error: 'Failed to create session.',
+        error: error instanceof Error ? error.message : 'Failed to create session.',
       };
     }
   }
@@ -164,7 +190,46 @@ class ApiService {
       console.error('Get session messages error:', error);
       return {
         success: false,
-        error: 'Failed to get session messages.',
+        error: error instanceof Error ? error.message : 'Failed to get session messages.',
+      };
+    }
+  }
+
+  async getUserSessions(): Promise<SessionResponse> {
+    try {
+      const response = await this.makeRequest<SessionResponse>('/session', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'list',
+        }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Get user sessions error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get user sessions.',
+      };
+    }
+  }
+
+  async deleteSession(sessionId: string): Promise<SessionResponse> {
+    try {
+      const response = await this.makeRequest<SessionResponse>('/session', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'delete',
+          sessionId,
+        }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Delete session error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete session.',
       };
     }
   }
@@ -185,7 +250,7 @@ class ApiService {
       console.error('Send message error:', error);
       return {
         success: false,
-        error: 'Failed to send message. Please try again.',
+        error: error instanceof Error ? error.message : 'Failed to send message. Please try again.',
       };
     }
   }
@@ -206,7 +271,7 @@ class ApiService {
       console.error('Execute action error:', error);
       return {
         success: false,
-        error: 'Failed to execute action.',
+        error: error instanceof Error ? error.message : 'Failed to execute action.',
       };
     }
   }
@@ -221,6 +286,68 @@ class ApiService {
     localStorage.removeItem('accessToken');
   }
 
+  // Set Cognito token (called by AuthContext after successful login)
+  setCognitoToken(accessToken: string): void {
+    this.accessToken = accessToken;
+    localStorage.setItem('accessToken', accessToken);
+    console.log('Cognito token set successfully');
+  }
+
+  // Clear authentication (for logout)
+  clearAuthentication(): void {
+    this.accessToken = null;
+    localStorage.removeItem('accessToken');
+    this.clearSessionData();
+    console.log('Authentication cleared');
+  }
+
+  // Clear session data (for login/logout to prevent 403 errors)
+  clearSessionData(): void {
+    // Clear any cached session data that might cause 403 errors
+    localStorage.removeItem('currentSessionId');
+    localStorage.removeItem('chatHistory');
+    console.log('Session data cleared');
+  }
+
+  // Debug method to check session status
+  async getDebugInfo(): Promise<any> {
+    try {
+      const response = await this.makeRequest('/debug/sessions');
+      return response;
+    } catch (error) {
+      console.error('Debug info error:', error);
+      return {
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  // Health check method
+  async checkHealth(): Promise<{ status: string; timestamp: string; config?: any; error?: string }> {
+    try {
+      const response = await this.makeRequest<{ status: string; timestamp: string; config?: any }>('/health');
+      return response;
+    } catch (error) {
+      console.error('Health check error:', error);
+      return {
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Health check failed'
+      };
+    }
+  }
+
+  // Connection test method
+  async testConnection(): Promise<boolean> {
+    try {
+      const health = await this.checkHealth();
+      return health.status === 'healthy';
+    } catch (error) {
+      console.error('Connection test failed:', error);
+      return false;
+    }
+  }
+
   // Mock methods for demo purposes
   async getMockChatResponse(message: string): Promise<ChatResponse> {
     // Simulate network delay
@@ -228,9 +355,9 @@ class ApiService {
 
     const responses = this.generateMockResponses();
     const lowerMessage = message.toLowerCase();
-    
+
     let response = responses.default;
-    
+
     if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
       response = responses.greeting;
     } else if (lowerMessage.includes('kubernetes') || lowerMessage.includes('k8s')) {
@@ -258,7 +385,7 @@ class ApiService {
 
   private generateMockResponses() {
     return {
-      greeting: `Hello! I'm your DevOps KnowledgeOps Agent, powered by Amazon Bedrock AgentCore with Strands integration. 
+      greeting: `Hello! I'm your DevOps KnowledgeOps Agent, powered by Amazon Bedrock AgentCore. 
 
 I'm here to help you with all your DevOps challenges! I can assist with:
 
@@ -677,7 +804,7 @@ spec:
 
 Would you like me to dive deeper into any specific security aspect or compliance framework?`,
 
-      default: `I'm your DevOps KnowledgeOps Agent, powered by Amazon Bedrock AgentCore with Strands reasoning capabilities! 
+      default: `I'm your DevOps KnowledgeOps Agent, powered by Amazon Bedrock AgentCore! 
 
 ## 🎯 **How I Can Help**
 

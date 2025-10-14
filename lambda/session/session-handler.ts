@@ -1,4 +1,4 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { SessionManager } from './session-manager';
 import { CognitoHelper } from '../auth/cognito-helper';
 
@@ -40,7 +40,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const accessToken = authHeader.substring(7); // Remove 'Bearer ' prefix
-    
+
     // Verify token and get user info
     const userInfo = await cognitoHelper.getUserInfo(accessToken);
     if (!userInfo) {
@@ -81,7 +81,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             body: JSON.stringify({ error: 'Session ID is required' }),
           };
         }
-        
+
         const session = await sessionManager.getSession(request.sessionId);
         if (!session) {
           return {

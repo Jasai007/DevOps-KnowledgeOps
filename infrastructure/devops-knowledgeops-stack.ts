@@ -6,6 +6,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
+import { BedrockResources } from './bedrock-resources';
 
 export class DevOpsKnowledgeOpsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -205,7 +206,7 @@ export class DevOpsKnowledgeOpsStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
       environment: {
-        AWS_REGION: cdk.Aws.REGION,
+        KNOWLEDGE_BUCKET_NAME: knowledgeBucket.bucketName,
       },
     });
 
@@ -224,8 +225,8 @@ export class DevOpsKnowledgeOpsStack extends cdk.Stack {
         KNOWLEDGE_BUCKET_NAME: knowledgeBucket.bucketName,
         USER_POOL_ID: userPool.userPoolId,
         USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
-        BEDROCK_AGENT_ID: process.env.BEDROCK_AGENT_ID || '',
-        BEDROCK_AGENT_ALIAS_ID: process.env.BEDROCK_AGENT_ALIAS_ID || 'TSTALIASID',
+        BEDROCK_AGENT_ID: 'MNJESZYALW',
+        BEDROCK_AGENT_ALIAS_ID: 'TSTALIASID',
       },
     });
 
@@ -278,6 +279,11 @@ export class DevOpsKnowledgeOpsStack extends cdk.Stack {
           'application/json': apigateway.Model.EMPTY_MODEL,
         },
       }],
+    });
+
+    // Create Bedrock resources
+    const bedrockResources = new BedrockResources(this, 'BedrockResources', {
+      knowledgeBucket,
     });
 
     // Output important values
