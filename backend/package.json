@@ -46,8 +46,10 @@
     "axios": "^1.12.2",
     "constructs": "^10.3.0",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "export": "^0.1.337",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "ngrok": "^5.0.0-beta.2",
     "uuid": "^9.0.1"
   }

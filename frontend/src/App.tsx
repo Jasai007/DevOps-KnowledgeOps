@@ -80,7 +80,7 @@ const AppContent: React.FC = () => {
       onNewChat={handleNewChat}
       refreshTrigger={refreshTrigger}
     >
-      <ChatContainer 
+      <ChatContainer
         sessionId={currentSessionId}
         onSessionChange={setCurrentSessionId}
         onNewMessage={handleNewMessage}

@@ -57,13 +57,19 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
     // Handle authentication state changes
     if (isAuthenticated !== lastAuthState) {
       setLastAuthState(isAuthenticated);
-      
+
       if (isAuthenticated) {
         // User just logged in - force new session to prevent 403 errors
         console.log('User logged in, creating new session');
         setSessionId(null);
         setMessages([]);
         initializeNewChat();
+        // Scroll to top after login
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = 0;
+          }
+        }, 100);
         return;
       } else {
         // User logged out - clear session data
@@ -81,10 +87,22 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
       // Clean AgentCore - no session history to load
       setMessages([]);
       setShowSuggestions(true);
+      // Scroll to top on session change
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = 0;
+        }
+      }, 100);
     } else if (propSessionId === undefined && sessionId) {
       // New chat requested - clear current session
       setSessionId(null);
       initializeNewChat();
+      // Scroll to top on new chat
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = 0;
+        }
+      }, 100);
     } else if (!propSessionId && !sessionId && isAuthenticated) {
       // Initialize new session and welcome message
       initializeNewChat();
@@ -115,19 +133,18 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
     const welcomeMessage: ExtendedMessage = {
       id: 'welcome',
       role: 'assistant',
-      content: isAuthenticated ? 
-        `👋 Welcome back${user?.email ? `, ${user.email.split('@')[0]}` : ''}! 
+      content: isAuthenticated ?
+        `👋 Welcome back${user?.email ? `, ${user.email.split('@')[0]}` : ''}!
 
 I'm your AI-powered DevOps expert, built with Amazon Bedrock AgentCore. I can help you with:
 
 🔧 **Infrastructure & Cloud**: AWS, Azure, GCP, hybrid setups
-🚀 **CI/CD Pipelines**: GitHub Actions, Jenkins, GitLab CI, AWS CodePipeline  
+🚀 **CI/CD Pipelines**: GitHub Actions, Jenkins, GitLab CI, AWS CodePipeline
 📦 **Containers**: Docker, Kubernetes, EKS, container orchestration
 📊 **Monitoring**: Prometheus, Grafana, CloudWatch, observability
 🔒 **Security**: DevSecOps practices, compliance, vulnerability management
 ⚡ **Automation**: Terraform, Ansible, Infrastructure as Code
 🐛 **Troubleshooting**: System debugging, performance optimization
-
 
 What DevOps challenge can I help you solve today?` :
         `👋 Welcome to the DevOps KnowledgeOps Agent!
