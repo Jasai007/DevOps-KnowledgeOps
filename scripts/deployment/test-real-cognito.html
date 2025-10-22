@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Cognito Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        input { padding: 8px; margin: 5px; width: 200px; border: 1px solid #ddd; border-radius: 3px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Real Cognito Authentication Test</h1>
+        
+        <div class="test-section info">
+            <h3>📋 Test Real Cognito Users</h3>
+            <p>This page tests authentication with your actual Cognito user pool.</p>
+            <p><strong>No more demo users!</strong> Only real Cognito users will work.</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🆕 Create New User</h3>
+            <div>
+                <input type="email" id="signup-email" placeholder="Email" value="">
+                <input type="password" id="signup-password" placeholder="Password" value="">
+                <button onclick="testSignup()">Create Account</button>
+            </div>
+            <div id="signup-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔑 Sign In with Real User</h3>
+            <div>
+                <input type="email" id="signin-email" placeholder="Email" value="">
+                <input type="password" id="signin-password" placeholder="Password" value="">
+                <button onclick="testSignin()">Sign In</button>
+            </div>
+            <div id="signin-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results</h3>
+            <div id="test-summary"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://66a22b8wlb.execute-api.us-east-1.amazonaws.com/prod';
+        
+        async function testSignup() {
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const resultDiv = document.getElementById('signup-result');
+            
+            if (!email || !password) {
+                resultDiv.innerHTML = '<div class="error"><p>Please enter both email and password</p></div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<p>Creating account...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'signup',
+                        username: email,
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Account Created Successfully!</h4>
+                            <p>Please check your email for confirmation instructions.</p>
+                            <p>After confirming, you can sign in with your credentials.</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Account Creation Failed</h4>
+                            <p><strong>Error:</strong> ${data.error || 'Unknown error'}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testSignin() {
+            const email = document.getElementById('signin-email').value;
+            const password = document.getElementById('signin-password').value;
+            const resultDiv = document.getElementById('signin-result');
+            
+            if (!email || !password) {
+                resultDiv.innerHTML = '<div class="error"><p>Please enter both email and password</p></div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<p>Signing in...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'signin',
+                        username: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Sign In Successful!</h4>
+                            <p><strong>User:</strong> ${data.data?.user?.email}</p>
+                            <p><strong>Username:</strong> ${data.data?.user?.username}</p>
+                            <p><strong>Access Token:</strong> ${data.data?.accessToken?.substring(0, 20)}...</p>
+                            <p>You can now use the application with full functionality!</p>
+                        </div>
+                    `;
+                    
+                    updateSummary('signin-success', `Successfully signed in as ${data.data?.user?.email}`);
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Sign In Failed</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${data.error || 'Unknown error'}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                    
+                    updateSummary('signin-failed', data.error || 'Sign in failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                
+                updateSummary('signin-error', error.message);
+            }
+        }
+        
+        function updateSummary(type, message) {
+            const summaryDiv = document.getElementById('test-summary');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            let statusClass = 'info';
+            let statusIcon = 'ℹ️';
+            
+            if (type.includes('success')) {
+                statusClass = 'success';
+                statusIcon = '✅';
+            } else if (type.includes('failed') || type.includes('error')) {
+                statusClass = 'error';
+                statusIcon = '❌';
+            }
+            
+            summaryDiv.innerHTML = `
+                <div class="${statusClass}">
+                    <h4>${statusIcon} Latest Test Result</h4>
+                    <p><strong>Time:</strong> ${timestamp}</p>
+                    <p><strong>Status:</strong> ${message}</p>
+                </div>
+            `;
+        }
+        
+        // Initialize
+        window.onload = function() {
+            const summaryDiv = document.getElementById('test-summary');
+            summaryDiv.innerHTML = `
+                <div class="info">
+                    <h4>🎯 Ready to Test</h4>
+                    <p>Create a new account or sign in with existing Cognito credentials.</p>
+                    <p><strong>Note:</strong> Demo users are no longer supported.</p>
+                </div>
+            `;
+        };
+    </script>
+</body>
+</html>

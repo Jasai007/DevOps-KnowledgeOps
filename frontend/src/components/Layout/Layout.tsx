@@ -5,7 +5,6 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import Header from '../Header/Header';
-import ChatHistory from '../Chat/ChatHistory';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,18 +37,8 @@ const Layout: React.FC<LayoutProps> = ({
       bgcolor: 'grey.50',
       overflow: 'hidden',
     }}>
-      <Header 
-        onHistoryClick={handleChatHistoryToggle}
-      />
-
-      <ChatHistory
-        open={chatHistoryOpen}
-        onClose={() => setChatHistoryOpen(false)}
-        currentSessionId={currentSessionId}
-        onSessionSelect={onSessionSelect || (() => {})}
-        onNewChat={onNewChat || (() => {})}
-        refreshTrigger={refreshTrigger}
-      />
+      {/* Header with logout functionality */}
+      <Header onHistoryClick={handleChatHistoryToggle} />
       
       <Box sx={{ 
         flex: 1,

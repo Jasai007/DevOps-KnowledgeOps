@@ -17,7 +17,6 @@ import {
 } from '@mui/material';
 import {
   SmartToy as BotIcon,
-  History as HistoryIcon,
   AccountCircle as AccountIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
@@ -97,50 +96,44 @@ const Header: React.FC<HeaderProps> = ({ onHistoryClick }) => {
           alignItems: 'center',
           gap: { xs: 0.5, sm: 1 },
         }}>
-          {onHistoryClick && (
-            <IconButton
-              color="inherit"
-              onClick={onHistoryClick}
-              sx={{ mr: 1 }}
-            >
-              <HistoryIcon />
-            </IconButton>
-          )}
-
           <Box sx={{
             display: 'flex',
             gap: { xs: 0.5, sm: 1 },
-            flexWrap: 'wrap',
             alignItems: 'center',
+            flexWrap: isMobile ? 'nowrap' : 'wrap',
           }}>
-            <Chip
-              label="AgentCore"
-              size="small"
-              variant="outlined"
-              sx={{
-                color: 'white',
-                borderColor: 'white',
-                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                height: { xs: 24, sm: 32 }
-              }}
-            />
+            {!isMobile && (
+              <>
+                <Chip
+                  label="AgentCore"
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    color: 'white',
+                    borderColor: 'white',
+                    fontSize: '0.75rem',
+                    height: 32
+                  }}
+                />
 
-            <Chip
-              label="Authenticated"
-              size="small"
-              sx={{
-                bgcolor: 'success.main',
-                color: 'white',
-                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                height: { xs: 24, sm: 32 }
-              }}
-            />
+                <Chip
+                  label="Authenticated"
+                  size="small"
+                  sx={{
+                    bgcolor: 'success.main',
+                    color: 'white',
+                    fontSize: '0.75rem',
+                    height: 32
+                  }}
+                />
+              </>
+            )}
 
             {/* User Menu */}
             <IconButton
               color="inherit"
               onClick={handleUserMenuClick}
-              sx={{ ml: 1 }}
+              sx={{ ml: isMobile ? 0 : 1 }}
             >
               <AccountIcon />
             </IconButton>

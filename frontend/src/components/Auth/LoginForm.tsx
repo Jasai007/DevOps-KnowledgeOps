@@ -28,10 +28,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onShowSignup, error: aut
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Demo users that exist in your Cognito user pool
   const demoUsers = [
-    { username: 'demo@example.com', password: 'Demo123!', role: 'Demo User' },
-    { username: 'admin@example.com', password: 'Admin123!', role: 'Administrator' },
-    { username: 'user1@example.com', password: 'User123!', role: 'Regular User' },
+    { username: 'demo@example.com', password: 'DemoPassword123!', role: 'Demo User' },
+    { username: 'admin@example.com', password: 'AdminPassword123!', role: 'Administrator' },
+    { username: 'user1@example.com', password: 'UserPassword123!', role: 'Regular User' },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,6 +55,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onShowSignup, error: aut
     setUsername(demoUser.username);
     setPassword(demoUser.password);
   };
+
+
 
   return (
     <Box
@@ -88,7 +91,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onShowSignup, error: aut
               margin="normal"
               required
               autoComplete="email"
-              placeholder="demo@example.com"
+              placeholder="your-email@example.com"
             />
             <TextField
               fullWidth
@@ -137,7 +140,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onShowSignup, error: aut
 
           <Divider sx={{ my: 2 }}>
             <Typography variant="caption" color="text.secondary">
-              Demo Accounts
+              Demo Accounts (Cognito Users)
             </Typography>
           </Divider>
 
@@ -157,6 +160,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onShowSignup, error: aut
           <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
             Click any demo account above to auto-fill credentials
           </Typography>
+
+
         </CardContent>
       </Card>
     </Box>

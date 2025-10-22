@@ -5,7 +5,6 @@ import LoginForm from './components/Auth/LoginForm';
 import SignupForm from './components/Auth/SignupForm';
 import Layout from './components/Layout/Layout';
 import ChatContainer from './components/Chat/ChatContainer';
-import ChatHistoryDebug from './components/Debug/ChatHistoryDebug';
 import './App.css';
 
 const AppContent: React.FC = () => {
@@ -73,16 +72,6 @@ const AppContent: React.FC = () => {
     );
   }
 
-  if (debugMode) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Tabs value={0}>
-          <Tab label="Debug Panel" />
-        </Tabs>
-        <ChatHistoryDebug />
-      </Box>
-    );
-  }
 
   return (
     <Layout

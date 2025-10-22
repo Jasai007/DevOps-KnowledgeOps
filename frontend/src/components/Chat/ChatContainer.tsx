@@ -78,7 +78,9 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
     // Handle session changes from props
     if (propSessionId && propSessionId !== sessionId) {
       setSessionId(propSessionId);
-      loadSessionMessages(propSessionId);
+      // Clean AgentCore - no session history to load
+      setMessages([]);
+      setShowSuggestions(true);
     } else if (propSessionId === undefined && sessionId) {
       // New chat requested - clear current session
       setSessionId(null);
@@ -126,7 +128,6 @@ I'm your AI-powered DevOps expert, built with Amazon Bedrock AgentCore. I can he
 ⚡ **Automation**: Terraform, Ansible, Infrastructure as Code
 🐛 **Troubleshooting**: System debugging, performance optimization
 
-I'll remember our conversation as we chat, so feel free to ask follow-up questions or refer to previous topics!
 
 What DevOps challenge can I help you solve today?` :
         `👋 Welcome to the DevOps KnowledgeOps Agent!
@@ -142,33 +143,7 @@ Once logged in, I can help you with infrastructure, CI/CD, containers, monitorin
     scrollToBottom();
   };
 
-  const loadSessionMessages = async (sessionIdToLoad: string) => {
-    console.log('Loading messages for session:', sessionIdToLoad);
-    try {
-      const response = await apiService.getSessionMessages(sessionIdToLoad);
-      if (response.success && response.messages && response.messages.length > 0) {
-        const loadedMessages: ExtendedMessage[] = response.messages.map((msg: any) => ({
-          id: msg.messageId || msg.id,
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date(msg.timestamp),
-          metadata: msg.metadata,
-        }));
-        setMessages(loadedMessages);
-        setShowSuggestions(false);
-        console.log('Loaded', loadedMessages.length, 'messages');
-      } else {
-        // If no messages found, start with empty session
-        console.log('No messages found for session, starting empty');
-        setMessages([]);
-        setShowSuggestions(true);
-      }
-    } catch (error) {
-      console.error('Failed to load session messages:', error);
-      setMessages([]);
-      setShowSuggestions(true);
-    }
-  };
+
 
   useEffect(() => {
     // Initialize chat on first load if no session is provided
@@ -319,7 +294,7 @@ Once logged in, I can help you with infrastructure, CI/CD, containers, monitorin
           <Container maxWidth="md">
             <Chip
               icon={<MemoryIcon />}
-              label={`Session Active - Conversation Memory Enabled`}
+              label={`Clean AgentCore - Direct Responses`}
               size="small"
               color="primary"
               variant="outlined"

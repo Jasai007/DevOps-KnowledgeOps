@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DevOps Chat Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .chat-container { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .message { margin: 10px 0; padding: 15px; border-radius: 8px; }
+        .user-message { background-color: #e3f2fd; text-align: right; }
+        .agent-message { background-color: #f3e5f5; }
+        .input-container { display: flex; gap: 10px; margin: 20px 0; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .metadata { font-size: 0.8em; color: #666; margin-top: 5px; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 DevOps KnowledgeOps Agent</h1>
+        <p>Test the complete chat functionality with session management and AgentCore integration.</p>
+        
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Ask me about DevOps, Kubernetes, CI/CD, monitoring..." />
+            <button onclick="sendMessage()" id="sendButton">Send</button>
+            <button onclick="newSession()" id="newSessionButton">New Session</button>
+        </div>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message loading">
+                <strong>🚀 Ready to help with your DevOps questions!</strong><br>
+                <span class="metadata">Session will be created automatically when you send your first message.</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CHAT_URL = 'https://66a22b8wlb.execute-api.us-east-1.amazonaws.com/prod/chat';
+        const SESSION_URL = 'https://66a22b8wlb.execute-api.us-east-1.amazonaws.com/prod/session';
+        
+        let currentSessionId = null;
+        let messageCount = 0;
+
+        async function createSession() {
+            try {
+                console.log('Creating new session...');
+                
+                const response = await fetch(SESSION_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'create'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Session creation failed: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentSessionId = data.sessionId;
+                    console.log('Session created:', currentSessionId);
+                    
+                    addMessage('system', `✅ New session created: ${currentSessionId}`, {
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    return currentSessionId;
+                } else {
+                    throw new Error(data.error || 'Failed to create session');
+                }
+                
+            } catch (error) {
+                console.error('Session creation error:', error);
+                addMessage('error', `❌ Failed to create session: ${error.message}`);
+                return null;
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Disable input while processing
+            input.disabled = true;
+            sendButton.disabled = true;
+            
+            try {
+                // Create session if needed
+                if (!currentSessionId) {
+                    await createSession();
+                    if (!currentSessionId) {
+                        throw new Error('Could not create session');
+                    }
+                }
+                
+                // Add user message to chat
+                addMessage('user', message);
+                input.value = '';
+                
+                // Add loading indicator
+                const loadingId = addMessage('loading', '🤔 Thinking...');
+                
+                console.log('Sending message to chat endpoint...');
+                
+                const response = await fetch(CHAT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        sessionId: currentSessionId
+                    })
+                });
+                
+                // Remove loading indicator
+                removeMessage(loadingId);
+                
+                if (!response.ok) {
+                    throw new Error(`Chat request failed: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Add agent response
+                    addMessage('agent', data.response, data.metadata);
+                    messageCount++;
+                } else {
+                    throw new Error(data.error || 'Chat request failed');
+                }
+                
+            } catch (error) {
+                console.error('Chat error:', error);
+                addMessage('error', `❌ Error: ${error.message}`);
+            } finally {
+                // Re-enable input
+                input.disabled = false;
+                sendButton.disabled = false;
+                input.focus();
+            }
+        }
+
+        function addMessage(type, content, metadata = null) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            let className = 'message';
+            let icon = '';
+            
+            switch (type) {
+                case 'user':
+                    className += ' user-message';
+                    icon = '👤 You';
+                    break;
+                case 'agent':
+                    className += ' agent-message';
+                    icon = '🤖 DevOps Agent';
+                    break;
+                case 'system':
+                    className += ' loading';
+                    icon = '🔧 System';
+                    break;
+                case 'error':
+                    className += ' error';
+                    icon = '❌ Error';
+                    break;
+                case 'loading':
+                    className += ' loading';
+                    icon = '⏳ Agent';
+                    break;
+            }
+            
+            let metadataHtml = '';
+            if (metadata) {
+                const details = [];
+                if (metadata.responseTime) details.push(`${metadata.responseTime}ms`);
+                if (metadata.confidence) details.push(`${Math.round(metadata.confidence * 100)}% confidence`);
+                if (metadata.agentId) details.push(`Agent: ${metadata.agentId}`);
+                if (metadata.cacheHit) details.push('Cache hit');
+                if (metadata.retryCount > 0) details.push(`${metadata.retryCount} retries`);
+                if (metadata.timestamp) details.push(new Date(metadata.timestamp).toLocaleTimeString());
+                
+                if (details.length > 0) {
+                    metadataHtml = `<div class="metadata">${details.join(' • ')}</div>`;
+                }
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.id = messageId;
+            messageDiv.className = className;
+            messageDiv.innerHTML = `
+                <strong>${icon}:</strong><br>
+                ${content.replace(/\n/g, '<br>')}
+                ${metadataHtml}
+            `;
+            
+            chatContainer.appendChild(messageDiv);
+            messageDiv.scrollIntoView({ behavior: 'smooth' });
+            
+            return messageId;
+        }
+
+        function removeMessage(messageId) {
+            const messageElement = document.getElementById(messageId);
+            if (messageElement) {
+                messageElement.remove();
+            }
+        }
+
+        async function newSession() {
+            currentSessionId = null;
+            messageCount = 0;
+            
+            // Clear chat
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = `
+                <div class="message loading">
+                    <strong>🚀 Ready for a new conversation!</strong><br>
+                    <span class="metadata">Send a message to start a new session.</span>
+                </div>
+            `;
+        }
+
+        // Handle Enter key in input
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Focus input on page load
+        window.onload = function() {
+            document.getElementById('messageInput').focus();
+        };
+    </script>
+</body>
+</html>

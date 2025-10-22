@@ -38,8 +38,19 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    const request: AuthRequest = JSON.parse(event.body);
+    const request: any = JSON.parse(event.body);
 
+    // Handle direct email/password format (new frontend format)
+    if (request.email && request.password && !request.action) {
+      const signInResult = await cognitoHelper.signIn(request.email, request.password);
+      return {
+        statusCode: signInResult.success ? 200 : 401,
+        headers,
+        body: JSON.stringify(signInResult),
+      };
+    }
+
+    // Handle action-based format (legacy format)
     switch (request.action) {
       case 'signin':
         if (!request.username || !request.password) {
@@ -49,7 +60,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             body: JSON.stringify({ error: 'Username and password are required' }),
           };
         }
-        
+
         const signInResult = await cognitoHelper.signIn(request.username, request.password);
         return {
           statusCode: signInResult.success ? 200 : 401,
@@ -65,7 +76,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             body: JSON.stringify({ error: 'Username, password, and email are required' }),
           };
         }
-        
+
         const signUpResult = await cognitoHelper.signUp(request.username, request.password, request.email);
         return {
           statusCode: signUpResult.success ? 200 : 400,
@@ -81,7 +92,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             body: JSON.stringify({ error: 'Username and confirmation code are required' }),
           };
         }
-        
+
         const confirmResult = await cognitoHelper.confirmSignUp(request.username, request.confirmationCode);
         return {
           statusCode: confirmResult.success ? 200 : 400,
@@ -97,7 +108,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             body: JSON.stringify({ error: 'Access token is required' }),
           };
         }
-        
+
         const userInfo = await cognitoHelper.getUserInfo(request.accessToken);
         if (userInfo) {
           return {

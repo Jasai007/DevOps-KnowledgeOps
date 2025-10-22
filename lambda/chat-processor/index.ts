@@ -54,17 +54,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    // Extract access token from Authorization header (optional for demo)
-    const authHeader = event.headers.Authorization || event.headers.authorization;
-    let userId = 'demo-user';
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const accessToken = authHeader.substring(7);
-      const userInfo = await cognitoHelper.getUserInfo(accessToken);
-      if (userInfo) {
-        userId = userInfo.username;
-      }
+    // Get user info from Cognito authorizer context
+    const cognitoContext = event.requestContext?.authorizer?.claims;
+    if (!cognitoContext) {
+      return {
+        statusCode: 401,
+        headers,
+        body: JSON.stringify({ error: 'Authorization required' }),
+      };
     }
+
+    const userId = cognitoContext.email || cognitoContext['cognito:username'];
 
     // Get or create session
     let currentSessionId = sessionId;

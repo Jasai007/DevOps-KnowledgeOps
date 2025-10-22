@@ -48,10 +48,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Check if session is still valid (1 hour for JWT tokens)
         const sessionAge = Date.now() - userData.loginTime;
         const maxAge = 60 * 60 * 1000; // 1 hour
-        
+
         if (sessionAge < maxAge) {
           // Verify token is still valid
-          verifyToken(userData.accessToken).then(isValid => {
+          verifyToken().then(isValid => {
             if (isValid) {
               setUser(userData);
               // Set the token in API service for existing sessions
@@ -76,21 +76,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const verifyToken = async (accessToken: string): Promise<boolean> => {
+  const verifyToken = async (): Promise<boolean> => {
     try {
-      const response = await fetch('http://localhost:3001/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'verify',
-          accessToken
-        }),
-      });
-
-      const data = await response.json();
-      return data.success;
+      // Temporarily disable health check to avoid CORS issues
+      // TODO: Re-enable once health endpoint CORS is fixed
+      // const response = await apiService.checkHealth();
+      // return response.status === 'healthy';
+      
+      // For now, just check if we have valid Cognito tokens
+      const tokens = apiService.getCognitoTokens();
+      return tokens !== null;
     } catch (error) {
       console.error('Token verification failed:', error);
       return false;
@@ -102,39 +97,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'signin',
-          username,
-          password
-        }),
-      });
-
-      const data = await response.json();
+      // Use the API service for authentication
+      const data = await apiService.signIn(username, password);
 
       if (data.success) {
         const userData: User = {
           username,
           email: username, // Cognito uses email as username
-          accessToken: data.accessToken,
-          idToken: data.idToken,
-          refreshToken: data.refreshToken,
+          accessToken: data.accessToken!,
+          idToken: data.idToken!,
+          refreshToken: data.refreshToken!,
           loginTime: Date.now(),
         };
-        
+
         setUser(userData);
         localStorage.setItem('devops-user', JSON.stringify(userData));
-        
-        // Set the Cognito token in API service
-        apiService.setCognitoToken(data.accessToken);
-        
+
+        // Set the Cognito tokens in API service
+        apiService.setCognitoToken(data.accessToken!, data.idToken!);
+
         // Clear any existing session data to prevent 403 errors
         apiService.clearSessionData();
-        
+
         setIsLoading(false);
         return true;
       } else {
@@ -155,25 +139,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'signup',
-          username: email,
-          email,
-          password
-        }),
-      });
-
-      const data = await response.json();
+      const data = await apiService.signup(email, password);
 
       if (data.success) {
-        // After successful signup, automatically log in
+        // Signup successful - user needs to confirm their email
+        setError('Account Created');
         setIsLoading(false);
-        return await login(email, password);
+        return true;
       } else {
         setError(data.error || 'Signup failed');
         setIsLoading(false);
@@ -191,7 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setError(null);
     localStorage.removeItem('devops-user');
-    
+
     // Clear authentication and session data from API service
     apiService.clearAuthentication();
   };

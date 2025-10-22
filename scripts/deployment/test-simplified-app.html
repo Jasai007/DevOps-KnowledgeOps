@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified DevOps Agent Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        input { padding: 8px; margin: 5px; width: 300px; border: 1px solid #ddd; border-radius: 3px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .chat-box { border: 1px solid #ddd; padding: 10px; height: 300px; overflow-y: auto; background: #f9f9f9; }
+        .message { margin: 10px 0; padding: 8px; border-radius: 5px; }
+        .user-message { background: #007bff; color: white; text-align: right; }
+        .agent-message { background: #e9ecef; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Simplified DevOps Agent Test</h1>
+        
+        <div class="test-section info">
+            <h3>📋 Simplified Architecture</h3>
+            <p>This version removes chat history complexity and focuses on core agent functionality:</p>
+            <ul>
+                <li>✅ Simple session creation (no DynamoDB)</li>
+                <li>✅ Direct agent responses (no history storage)</li>
+                <li>✅ Real Cognito authentication</li>
+                <li>✅ DevOps-focused responses</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🔐 Authentication Test</h3>
+            <div>
+                <input type="email" id="auth-email" placeholder="Email" value="demo@example.com">
+                <input type="password" id="auth-password" placeholder="Password" value="DemoPassword123!">
+                <button onclick="testAuth()">Sign In</button>
+            </div>
+            <div id="auth-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>💬 Chat Test</h3>
+            <div class="chat-box" id="chat-box"></div>
+            <div>
+                <input type="text" id="chat-input" placeholder="Ask about DevOps..." value="What is Kubernetes?">
+                <button onclick="sendMessage()">Send</button>
+                <button onclick="clearChat()">Clear</button>
+            </div>
+            <div id="chat-status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Quick Tests</h3>
+            <button onclick="testSession()">Test Session Creation</button>
+            <button onclick="testKubernetes()">Ask About Kubernetes</button>
+            <button onclick="testTerraform()">Ask About Terraform</button>
+            <button onclick="testDocker()">Ask About Docker</button>
+            <div id="quick-test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://66a22b8wlb.execute-api.us-east-1.amazonaws.com/prod';
+        let currentSessionId = null;
+        let authToken = null;
+        
+        async function testAuth() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const resultDiv = document.getElementById('auth-result');
+            
+            resultDiv.innerHTML = '<p>Authenticating...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'signin',
+                        username: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    authToken = data.data?.idToken;
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Authentication Successful!</h4>
+                            <p><strong>User:</strong> ${data.data?.user?.email}</p>
+                            <p>You can now test the chat functionality!</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Authentication Failed</h4>
+                            <p>${data.error || 'Unknown error'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testSession() {
+            const resultDiv = document.getElementById('quick-test-result');
+            resultDiv.innerHTML = '<p>Creating session...</p>';
+            
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/session`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        action: 'create',
+                        userId: 'demo@example.com'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    currentSessionId = data.sessionId;
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Session Created!</h4>
+                            <p><strong>Session ID:</strong> ${data.sessionId}</p>
+                            <p><strong>Created:</strong> ${data.createdAt}</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Session Creation Failed</h4>
+                            <p>${data.error || 'Unknown error'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function sendMessage(messageText = null) {
+            const message = messageText || document.getElementById('chat-input').value;
+            if (!message.trim()) return;
+            
+            const chatBox = document.getElementById('chat-box');
+            const statusDiv = document.getElementById('chat-status');
+            
+            // Add user message to chat
+            chatBox.innerHTML += `<div class="message user-message">You: ${message}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            statusDiv.innerHTML = '<p>Getting response...</p>';
+            
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const sessionId = currentSessionId || `session-${Date.now()}`;
+                
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        message: message,
+                        sessionId: sessionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Add agent response to chat
+                    chatBox.innerHTML += `<div class="message agent-message">Agent: ${data.response}</div>`;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    
+                    statusDiv.innerHTML = `<p class="success">✅ Response received (${data.metadata?.responseTime || 0}ms)</p>`;
+                    
+                    // Clear input
+                    if (!messageText) {
+                        document.getElementById('chat-input').value = '';
+                    }
+                } else {
+                    chatBox.innerHTML += `<div class="message agent-message" style="background: #f8d7da;">Error: ${data.error || 'Unknown error'}</div>`;
+                    statusDiv.innerHTML = `<p class="error">❌ Chat failed: ${data.error || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                chatBox.innerHTML += `<div class="message agent-message" style="background: #f8d7da;">Network Error: ${error.message}</div>`;
+                statusDiv.innerHTML = `<p class="error">❌ Network error: ${error.message}</p>`;
+            }
+        }
+        
+        function clearChat() {
+            document.getElementById('chat-box').innerHTML = '';
+            document.getElementById('chat-status').innerHTML = '';
+        }
+        
+        function testKubernetes() {
+            sendMessage('What is Kubernetes and how do I use it?');
+        }
+        
+        function testTerraform() {
+            sendMessage('Explain Terraform and show me an example');
+        }
+        
+        function testDocker() {
+            sendMessage('How do I use Docker for containerization?');
+        }
+        
+        // Allow Enter key to send messages
+        document.getElementById('chat-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

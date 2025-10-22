@@ -2,10 +2,11 @@
  * API service for DevOps KnowledgeOps Agent
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// Update API_BASE_URL to use Amplify backend or Elastic Beanstalk
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 export interface AuthRequest {
-  action: 'signin' | 'signup' | 'create-demo-user';
+  action: 'signin' | 'signup';
   username?: string;
   password?: string;
   email?: string;
@@ -18,6 +19,18 @@ export interface AuthResponse {
   refreshToken?: string;
   error?: string;
   message?: string;
+  data?: {
+    success: boolean;
+    accessToken: string;
+    idToken: string;
+    refreshToken: string;
+    user: {
+      email: string;
+      username: string;
+      role: string;
+    };
+    message: string;
+  };
 }
 
 export interface ChatRequest {
@@ -69,6 +82,7 @@ export interface SessionResponse {
   error?: string;
   sessionId?: string;
   messageCount?: number;
+  createdAt?: string;
 }
 
 class ApiService {
@@ -77,10 +91,12 @@ class ApiService {
   constructor() {
     // Load Cognito token from localStorage
     this.accessToken = localStorage.getItem('accessToken');
-    
+
     // No auto-authentication - users must explicitly sign in with Cognito
     console.log('API Service initialized with Cognito authentication');
   }
+
+
 
   private async makeRequest<T>(
     endpoint: string,
@@ -93,7 +109,11 @@ class ApiService {
       ...(options.headers as Record<string, string>),
     };
 
-    if (this.accessToken) {
+    // Use ID token for Cognito user identification
+    const idToken = localStorage.getItem('idToken');
+    if (idToken) {
+      headers['Authorization'] = `Bearer ${idToken}`;
+    } else if (this.accessToken) {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
@@ -112,21 +132,42 @@ class ApiService {
   // Authentication methods
   async signIn(username: string, password: string): Promise<AuthResponse> {
     try {
-      const response = await this.makeRequest<AuthResponse>('/auth', {
+      // Use direct fetch to avoid makeRequest complications
+      const response = await fetch(`${API_BASE_URL}/auth`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'signin',
-          username,
+          username: username,
           password,
         }),
       });
 
-      if (response.success && response.accessToken) {
-        this.accessToken = response.accessToken;
-        localStorage.setItem('accessToken', response.accessToken);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return response;
+      const data = await response.json();
+
+      // Handle the nested response structure from Lambda API
+      if (data.success && data.data?.accessToken) {
+        this.accessToken = data.data.accessToken;
+        localStorage.setItem('accessToken', data.data.accessToken);
+        if (data.data.idToken) {
+          localStorage.setItem('idToken', data.data.idToken);
+        }
+      }
+
+      return {
+        success: data.success,
+        accessToken: data.data?.accessToken,
+        idToken: data.data?.idToken,
+        refreshToken: data.data?.refreshToken,
+        error: data.error,
+        data: data.data
+      };
     } catch (error) {
       console.error('Sign in error:', error);
       return {
@@ -136,103 +177,72 @@ class ApiService {
     }
   }
 
-  async createDemoUser(): Promise<AuthResponse> {
+  async signup(email: string, password: string): Promise<AuthResponse> {
     try {
-      const response = await this.makeRequest<AuthResponse>('/auth', {
+      const response = await fetch(`${API_BASE_URL}/auth`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          action: 'create-demo-user',
+          action: 'signup',
+          username: email,
+          email: email,
+          password: password,
         }),
       });
 
-      return response;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: data.success,
+        error: data.error
+      };
     } catch (error) {
-      console.error('Create demo user error:', error);
+      console.error('Signup error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to create demo user.',
+        error: error instanceof Error ? error.message : 'Failed to sign up.',
       };
     }
   }
 
   // Session methods
   async createSession(): Promise<SessionResponse> {
-    try {
-      const response = await this.makeRequest<SessionResponse>('/session', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'create',
-        }),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('Create session error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to create session.',
-      };
-    }
+    // Simple session creation - no storage
+    const sessionId = `session-${Date.now()}`;
+    return {
+      success: true,
+      sessionId: sessionId,
+      session: {
+        sessionId: sessionId,
+        createdAt: new Date().toISOString(),
+        lastActivity: new Date().toISOString(),
+        messageCount: 0
+      }
+    };
   }
 
-  async getSessionMessages(sessionId: string): Promise<SessionResponse> {
-    try {
-      const response = await this.makeRequest<SessionResponse>('/session', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'messages',
-          sessionId,
-        }),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('Get session messages error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get session messages.',
-      };
-    }
+  async getSessionMessages(): Promise<SessionResponse> {
+    // No chat history - always return empty
+    return {
+      success: true,
+      messages: []
+    };
   }
 
   async getUserSessions(): Promise<SessionResponse> {
-    try {
-      const response = await this.makeRequest<SessionResponse>('/session', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'list',
-        }),
-      });
-
-      return response;
-    } catch (error) {
-      console.error('Get user sessions error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get user sessions.',
-      };
-    }
+    // No chat history - always return empty
+    return {
+      success: true,
+      sessions: []
+    };
   }
 
-  async deleteSession(sessionId: string): Promise<SessionResponse> {
-    try {
-      const response = await this.makeRequest<SessionResponse>('/session', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'delete',
-          sessionId,
-        }),
-      });
 
-      return response;
-    } catch (error) {
-      console.error('Delete session error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to delete session.',
-      };
-    }
-  }
 
   // Chat methods
   async sendMessage(message: string, sessionId?: string): Promise<ChatResponse> {
@@ -241,7 +251,7 @@ class ApiService {
         method: 'POST',
         body: JSON.stringify({
           message,
-          sessionId,
+          sessionId: sessionId || `session-${Date.now()}`,
         }),
       });
 
@@ -286,11 +296,14 @@ class ApiService {
     localStorage.removeItem('accessToken');
   }
 
-  // Set Cognito token (called by AuthContext after successful login)
-  setCognitoToken(accessToken: string): void {
+  // Set Cognito tokens (called by AuthContext after successful login)
+  setCognitoToken(accessToken: string, idToken?: string): void {
     this.accessToken = accessToken;
     localStorage.setItem('accessToken', accessToken);
-    console.log('Cognito token set successfully');
+    if (idToken) {
+      localStorage.setItem('idToken', idToken);
+    }
+    console.log('Cognito tokens set successfully');
   }
 
   // Clear authentication (for logout)
@@ -301,6 +314,17 @@ class ApiService {
     console.log('Authentication cleared');
   }
 
+  // Get current Cognito tokens
+  getCognitoTokens(): { accessToken: string; idToken: string } | null {
+    const accessToken = localStorage.getItem('accessToken');
+    const idToken = localStorage.getItem('idToken');
+    
+    if (accessToken && idToken) {
+      return { accessToken, idToken };
+    }
+    return null;
+  }
+
   // Clear session data (for login/logout to prevent 403 errors)
   clearSessionData(): void {
     // Clear any cached session data that might cause 403 errors
@@ -309,18 +333,7 @@ class ApiService {
     console.log('Session data cleared');
   }
 
-  // Debug method to check session status
-  async getDebugInfo(): Promise<any> {
-    try {
-      const response = await this.makeRequest('/debug/sessions');
-      return response;
-    } catch (error) {
-      console.error('Debug info error:', error);
-      return {
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
-      };
-    }
-  }
+
 
   // Health check method
   async checkHealth(): Promise<{ status: string; timestamp: string; config?: any; error?: string }> {

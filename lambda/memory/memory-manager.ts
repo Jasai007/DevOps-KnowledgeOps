@@ -3,11 +3,11 @@
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { 
-  DynamoDBDocumentClient, 
-  PutCommand, 
-  GetCommand, 
-  QueryCommand 
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  GetCommand,
+  QueryCommand
 } from '@aws-sdk/lib-dynamodb';
 
 export interface ConversationMemory {
@@ -50,7 +50,7 @@ export class MemoryManager {
   constructor(region: string = 'us-east-1', retentionDays: number = 7) {
     const dynamoClient = new DynamoDBClient({ region });
     this.client = DynamoDBDocumentClient.from(dynamoClient);
-    
+
     // Use environment variables with fallback
     const getEnvVar = (name: string): string | undefined => {
       try {
@@ -59,11 +59,11 @@ export class MemoryManager {
         return undefined;
       }
     };
-    
+
     const memoryTableName = getEnvVar('MEMORY_TABLE_NAME');
     const chatTableName = getEnvVar('CHAT_TABLE_NAME');
     this.tableName = memoryTableName || chatTableName || 'devops-agent-memory';
-    
+
     this.retentionDays = retentionDays;
   }
 
@@ -238,14 +238,21 @@ export class MemoryManager {
 
   async generateMemorySummary(sessionId: string): Promise<string> {
     const memories = await this.getSessionMemories(sessionId);
-    
+
     if (memories.length === 0) {
       return 'No previous conversation context available.';
     }
 
     const context = (memories.find(m => m.memoryType === 'context')?.memoryValue as Record<string, unknown>) || {};
-    const insights = (memories.find(m => m.memoryType === 'insights')?.memoryValue as ConversationInsights) || {};
-    
+    const insightsMemory = memories.find(m => m.memoryType === 'insights')?.memoryValue;
+    const insights: ConversationInsights = insightsMemory ? insightsMemory as ConversationInsights : {
+      commonTopics: [],
+      frequentTools: [],
+      problemPatterns: [],
+      successfulSolutions: [],
+      learningProgress: []
+    };
+
     const summary: string[] = [];
 
     if (context.currentTopic && typeof context.currentTopic === 'string') {
@@ -256,19 +263,19 @@ export class MemoryManager {
       summary.push(`Tools discussed: ${context.mentionedTools.join(', ')}`);
     }
 
-    if (context.infrastructureContext && 
-        typeof context.infrastructureContext === 'object' && 
-        context.infrastructureContext !== null &&
-        'cloudProvider' in context.infrastructureContext) {
+    if (context.infrastructureContext &&
+      typeof context.infrastructureContext === 'object' &&
+      context.infrastructureContext !== null &&
+      'cloudProvider' in context.infrastructureContext) {
       const infraContext = context.infrastructureContext as { cloudProvider: string };
       summary.push(`Cloud context: ${infraContext.cloudProvider}`);
     }
 
-    if (insights.commonTopics && insights.commonTopics.length > 0) {
+    if (insights.commonTopics && Array.isArray(insights.commonTopics) && insights.commonTopics.length > 0) {
       summary.push(`Common topics: ${insights.commonTopics.slice(0, 3).join(', ')}`);
     }
 
-    return summary.length > 0 
+    return summary.length > 0
       ? `Previous context: ${summary.join('; ')}`
       : 'New conversation starting.';
   }
@@ -291,7 +298,7 @@ export class MemoryManager {
     }, {} as Record<string, number>);
 
     return Object.entries(counts)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 10) // Keep top 10
       .map(([item]) => item);
   }

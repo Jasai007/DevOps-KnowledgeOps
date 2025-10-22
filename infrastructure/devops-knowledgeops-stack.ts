@@ -170,7 +170,7 @@ export class DevOpsKnowledgeOpsStack extends cdk.Stack {
       functionName: 'devops-auth-handler',
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'auth-handler.handler',
-      code: lambda.Code.fromAsset('lambda/auth'),
+      code: lambda.Code.fromAsset('../lambda/auth'),
       role: lambdaRole,
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
@@ -185,7 +185,7 @@ export class DevOpsKnowledgeOpsStack extends cdk.Stack {
       functionName: 'devops-session-handler',
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'session-handler.handler',
-      code: lambda.Code.fromAsset('lambda/session'),
+      code: lambda.Code.fromAsset('../lambda/session'),
       role: lambdaRole,
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
@@ -201,7 +201,7 @@ export class DevOpsKnowledgeOpsStack extends cdk.Stack {
       functionName: 'devops-actions-handler',
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'action-handler.handler',
-      code: lambda.Code.fromAsset('lambda/actions'),
+      code: lambda.Code.fromAsset('../lambda/actions'),
       role: lambdaRole,
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
@@ -215,7 +215,7 @@ export class DevOpsKnowledgeOpsStack extends cdk.Stack {
       functionName: 'devops-chat-processor',
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset('lambda/chat-processor'),
+      code: lambda.Code.fromAsset('../lambda/chat-processor'),
       role: lambdaRole,
       timeout: cdk.Duration.seconds(60), // Increased for Bedrock calls
       memorySize: 1024,
@@ -241,21 +241,45 @@ export class DevOpsKnowledgeOpsStack extends cdk.Stack {
       },
     });
 
-    // Authentication endpoint
+    // Cognito authorizer for protected endpoints
+    const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
+      cognitoUserPools: [userPool],
+      authorizerName: 'DevOpsCognitoAuthorizer',
+    });
+
+    // Authentication endpoint - PUBLIC (no authentication required)
     const authResource = api.root.addResource('auth');
-    authResource.addMethod('POST', new apigateway.LambdaIntegration(authLambda));
+    authResource.addMethod('POST', new apigateway.LambdaIntegration(authLambda), {
+      authorizationType: apigateway.AuthorizationType.NONE,
+    });
 
-    // Session management endpoint
+    // Add explicit CORS preflight options for auth resource
+    authResource.addCorsPreflight({
+      allowOrigins: apigateway.Cors.ALL_ORIGINS,
+      allowMethods: apigateway.Cors.ALL_METHODS,
+      allowHeaders: ['Content-Type', 'Authorization'],
+    });
+
+    // Session management endpoint - PROTECTED
     const sessionResource = api.root.addResource('session');
-    sessionResource.addMethod('POST', new apigateway.LambdaIntegration(sessionLambda));
+    sessionResource.addMethod('POST', new apigateway.LambdaIntegration(sessionLambda), {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: cognitoAuthorizer,
+    });
 
-    // Actions endpoint
+    // Actions endpoint - PROTECTED
     const actionsResource = api.root.addResource('actions');
-    actionsResource.addMethod('POST', new apigateway.LambdaIntegration(actionsLambda));
+    actionsResource.addMethod('POST', new apigateway.LambdaIntegration(actionsLambda), {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: cognitoAuthorizer,
+    });
 
-    // Chat endpoint
+    // Chat endpoint - PROTECTED
     const chatResource = api.root.addResource('chat');
-    chatResource.addMethod('POST', new apigateway.LambdaIntegration(chatLambda));
+    chatResource.addMethod('POST', new apigateway.LambdaIntegration(chatLambda), {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: cognitoAuthorizer,
+    });
 
     // Health check endpoint
     const healthResource = api.root.addResource('health');

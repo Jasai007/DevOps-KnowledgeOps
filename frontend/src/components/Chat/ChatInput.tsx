@@ -11,8 +11,6 @@ import {
 } from '@mui/material';
 import {
   Send as SendIcon,
-  Mic as MicIcon,
-  AttachFile as AttachIcon,
 } from '@mui/icons-material';
 
 interface ChatInputProps {
@@ -88,25 +86,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
               }}
             />
             
-            <Box sx={{ display: 'flex', gap: 0.5, ml: 1 }}>
-              <IconButton
-                size="small"
-                color="primary"
-                disabled
-                sx={{ opacity: 0.5 }}
-              >
-                <AttachIcon fontSize="small" />
-              </IconButton>
-              
-              <IconButton
-                size="small"
-                color="primary"
-                disabled
-                sx={{ opacity: 0.5 }}
-              >
-                <MicIcon fontSize="small" />
-              </IconButton>
-            </Box>
+
           </Box>
         </Paper>
         

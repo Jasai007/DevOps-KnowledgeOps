@@ -1,23 +1,23 @@
 # DevOps KnowledgeOps Agent
 
-An AI-powered DevOps assistant built with Amazon Bedrock AgentCore that provides expert-level DevOps guidance through an intuitive chat interface.
+A clean, simplified AI-powered DevOps assistant built with Amazon Bedrock AgentCore that provides expert-level DevOps guidance without the complexity of chat history storage.
 
 ## Features
 
-- **Bedrock AgentCore Integration**: Leverages AgentCore Gateway, Memory, and Strands Agent for enhanced reasoning
-- **DevOps Expertise**: Comprehensive knowledge base covering Infrastructure as Code, CI/CD, containers, monitoring, and security
-- **Real-time Chat**: Modern React interface with syntax highlighting and live responses
-- **AWS Integration**: Secure access to AWS services with role-based permissions
+- **Pure AgentCore Integration**: Direct integration with Bedrock AgentCore for immediate responses
+- **DevOps Expertise**: Comprehensive knowledge covering Infrastructure as Code, CI/CD, containers, monitoring, and security
+- **Clean Chat Interface**: Modern React interface focused on current conversation
+- **AWS Cognito Authentication**: Secure user authentication without session complexity
 - **Multi-cloud Support**: Guidance for AWS, Azure, GCP, and hybrid environments
 
 ## Architecture
 
-The system uses a serverless architecture with:
-- **Frontend**: React chat interface with real-time WebSocket communication
-- **Backend**: AWS Lambda functions orchestrated by API Gateway
-- **AI Core**: Bedrock AgentCore with Strands integration for enhanced reasoning
-- **Knowledge**: S3-based knowledge base with vector search capabilities
-- **Authentication**: AWS Cognito for user management and session persistence
+Simplified serverless architecture:
+- **Frontend**: React chat interface with direct API calls
+- **Backend**: Clean Express.js server with AgentCore Gateway
+- **AI Core**: Direct Bedrock AgentCore integration
+- **Authentication**: AWS Cognito for user management
+- **No History**: Stateless conversations focused on current queries
 
 ## Quick Start
 
