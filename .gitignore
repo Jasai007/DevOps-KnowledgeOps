@@ -29,7 +29,12 @@ build/
 .idea/
 *.swp
 *.swo
+
+# Project specific folders
 .kiro/
+scripts/
+tests/
+tools/
 
 # OS
 .DS_Store
